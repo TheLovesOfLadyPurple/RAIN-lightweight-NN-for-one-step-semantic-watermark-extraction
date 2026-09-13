@@ -1,0 +1,76 @@
+# Single-NAFNet ablation: directly predict terminal noise x_T.
+name: SingleNAFNetDirectXT
+model_type: ReverseDistillSingleNAFNetModel
+prediction_type: direct_xT
+scale: 1
+num_gpu: 1
+manual_seed: 10
+use_prompt_emb: false
+
+use_adv_training: false
+adv_training_prob: 0.5
+adv_vae_batch_size: 4
+adv_distortion:
+  jpeg_ratio: 25
+  random_crop_ratio: 0.6
+  random_drop_ratio: 0.8
+  gaussian_blur_r: 4
+  median_blur_k: 7
+  gaussian_std: 0.05
+  sp_prob: 0.05
+  brightness_factor: 6
+  resize_ratio: 0.25
+
+datasets:
+  train:
+    name: SingleNAFNetFeatures
+    type: SingleNAFNetFeatureDataset
+    dataroot_gt: ./gen_img_val_v15_coco2014_unipc_low/noise_gt.lmdb
+    dataroot_final_latents: ./gen_img_val_v15_coco2014_unipc_low/final_latents.lmdb
+    filename_tmpl: '{}'
+    io_backend:
+      type: lmdb
+    num_worker_per_gpu: 1
+    batch_size_per_gpu: 50
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+network_g:
+  type: NAFNet
+  img_channel: 4
+  width: 64
+  enc_blk_nums: [5, 5]
+  middle_blk_num: 12
+  dec_blk_nums: [5, 5]
+
+path:
+  pretrain_network_g: ~
+  pretrain_network_g_ema: ~
+  strict_load_g: false
+  resume_state: ~
+
+train:
+  optim_g:
+    type: AdamW
+    lr: !!float 1e-3
+    weight_decay: 0.
+    betas: [0.9, 0.9]
+  scheduler:
+    type: TrueCosineAnnealingLR
+    T_max: 15000
+    eta_min: !!float 1e-7
+  total_iter: 15000
+  warmup_iter: -1
+  ema_decay: 0.95
+  xt_opt:
+    type: L1Loss
+    loss_weight: 1
+    reduction: mean
+
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 5e3
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~

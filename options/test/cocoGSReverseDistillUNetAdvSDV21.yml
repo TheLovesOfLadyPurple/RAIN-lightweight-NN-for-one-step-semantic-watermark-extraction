@@ -1,0 +1,42 @@
+# COCO Gaussian-Shading robustness evaluation: SD 2.1 adversarial extractor.
+name: COCOGSReverseDistillUNetAdvSDV21
+model_type: ReverseDistillModel
+scale: 1
+cfg_sacle: 1.2
+alpha_cumprod_method: linear_alpha
+timestep_head_type: classifier
+num_gpu: 1
+manual_seed: 10
+online_one_step_distillation: false
+use_pred_xstart_prompt: true
+use_prompt_emb: false
+use_adv_training: false
+sd_model_id: stabilityai/stable-diffusion-2-1-base
+
+path:
+  pretrain_network_xstart: ./experiments/ReverseDistillUNetAdv-adv-v21/models/net_xstart_ema_15000.pth
+  pretrain_network_xt: ./experiments/ReverseDistillUNetAdv-adv-v21/models/net_xt_ema_15000.pth
+  pretrain_network_xstart_ema: ~
+  pretrain_network_xt_ema: ~
+  pretrain_xstart_prompt_tokens: ./experiments/ReverseDistillUNetAdv-adv-v21/models/xstart_prompt_tokens_15000.pth
+  pretrain_xstart_prompt_tokens_ema: ~
+  strict_load_g: true
+  resume_state: ~
+
+network_xstart:
+  type: NAFNet
+  img_channel: 4
+  width: 64
+  enc_blk_nums: [5, 5]
+  middle_blk_num: 12
+  dec_blk_nums: [5, 5]
+  prompt_channel_width: 768
+
+network_xt:
+  type: NAFNet
+  img_channel: 4
+  width: 64
+  enc_blk_nums: [5, 5]
+  middle_blk_num: 12
+  dec_blk_nums: [5, 5]
+  prompt_channel_width: 768

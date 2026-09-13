@@ -1,0 +1,62 @@
+# ------------------------------------------------------------------------
+# Copyright (c) 2022 megvii-model. All Rights Reserved.
+# ------------------------------------------------------------------------
+# Modified from BasicSR (https://github.com/xinntao/BasicSR)
+# Copyright 2018-2020 BasicSR Authors
+# ------------------------------------------------------------------------
+# general settings
+name: XABNAFNet141-test
+model_type: ImageRestorationModel
+scale: 1
+num_gpu: 1
+manual_seed: 10
+
+# dataset and data loader settings
+datasets:
+
+  val:
+    name: SIDD_val
+    type: AttentionFeatureDataset
+
+    dataroot_gt: ./datasets/SIDD/val/gt_crops.lmdb
+    dataroot_lq: ./datasets/SIDD/val/input_crops.lmdb
+    use_embed: true
+
+    io_backend:
+      type: lmdb
+
+network_g:
+  type: HybridXABNAFNet
+  img_channel: 4
+  width: 64
+  enc_blk_nums: [10, 10]
+  middle_blk_num: 24
+  dec_blk_nums: [10, 10]
+  use_time_embed: true
+
+# # path
+path:
+  pretrain_network_g: experiments-result/hybrid_141_140000.pth
+  strict_load_g: true
+  resume_state: ~
+
+# validation settings
+val:
+  save_img: true
+  grids: false
+  use_image: false
+
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+
+# dist training settings
+# dist_params:
+#   backend: nccl
+#   port: 29500

@@ -1,0 +1,133 @@
+# ------------------------------------------------------------------------
+# Copyright (c) 2022 megvii-model. All Rights Reserved.
+# ------------------------------------------------------------------------
+# Modified from BasicSR (https://github.com/xinntao/BasicSR)
+# Copyright 2018-2020 BasicSR Authors
+# ------------------------------------------------------------------------
+# general settings
+name: UnetHybridLowR
+model_type: ImageRestorationModel
+scale: 1
+num_gpu: 1
+manual_seed: 10
+timestep: 809.5735
+total_ddim_step: 1000
+is_predict_noise: false
+is_low_res: true
+use_freeU: false
+variant_level: 0.8
+
+datasets:
+  train:
+    name: SIDD
+    type: DistillFeatureDataset
+    dataroot_gt: ./dataset/nonfixed-pred/Data/gt.lmdb
+    dataroot_prompt: ./dataset/nonfixed-pred/Data/prompt.lmdb
+    use_embed: true
+    filename_tmpl: '{}'
+    io_backend:
+      type: lmdb
+
+    gt_size: 64
+    use_flip: false
+    use_rot: false
+    total_ddim_step: 1000
+
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: 1
+    batch_size_per_gpu: 2
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+  # val:
+  #   name: SIDD_val
+  #   type: ComplexOnlineDistillDataset
+  #   dataroot_gt: ./dataset/nonfixed-pred/val/gt.lmdb
+  #   dataroot_prompt: ./dataset/nonfixed-pred/val/prompt.lmdb
+  #   use_embed: true
+  #   # total_lcm_iteration: 80000
+  #   filename_tmpl: '{}'
+  #   io_backend:
+  #     type: lmdb
+
+  #   gt_size: 64
+  #   use_flip: false
+  #   use_rot: false
+  #   total_ddim_step: 20
+  #   timestep: 809.5735
+  #   need_freeU: false
+  #   is_predict_noise: false
+
+  #   # data loader
+  #   use_shuffle: false
+  #   num_worker_per_gpu: 1
+  #   batch_size_per_gpu: 1
+  #   dataset_enlarge_ratio: 1
+  #   prefetch_mode: ~
+
+
+
+network_g:
+  type: HybridXABNAFNet
+  img_channel: 4
+  width: 64
+  enc_blk_nums: [10, 10]
+  middle_blk_num: 24
+  dec_blk_nums: [10, 10]
+  use_time_embed: true
+
+# # path
+path:
+  pretrain_network_g: ~
+  strict_load_g: false
+  resume_state: ~
+
+# training settings
+train:
+  optim_g:
+    type: AdamW
+    lr: !!float 1e-3
+    weight_decay: 0.
+    betas: [0.9, 0.9]
+
+  scheduler:
+    type: TrueCosineAnnealingLR
+    T_max: 80000
+    eta_min: !!float 1e-7
+
+  total_iter: 80000
+  warmup_iter: -1 # no warm up
+
+  # losses
+  pixel_opt:
+    type: L1Loss
+    loss_weight: 1
+    reduction: mean
+
+# # validation settings
+# val:
+#   val_freq: !!float 5e3
+#   save_img: false
+#   use_image: false
+
+#   metrics:
+#     psnr: # metric name, can be arbitrary
+#       type: calculate_psnr
+#       crop_border: 0
+#       test_y_channel: false
+#     # ssim:
+#     #   type: calculate_ssim
+#     #   crop_border: 0
+#     #   test_y_channel: false
+
+
+# logging settings
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 5e3
+  save_ema: true
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
