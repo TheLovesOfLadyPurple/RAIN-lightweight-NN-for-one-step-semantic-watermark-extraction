@@ -7,6 +7,7 @@ from pathlib import Path
 
 import torch
 from diffusers import StableDiffusionPipeline, UniPCMultistepScheduler
+from huggingface_hub import hf_hub_download
 from tqdm import tqdm
 
 from local_gaussian_shading_test_eval import (
@@ -32,6 +33,7 @@ from reverse_distill_unipc_eval import convert_reverse_model_to_float32, prompt_
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 DEFAULT_MODEL_ID = 'sd2-community/stable-diffusion-2-1'
+DEFAULT_OSI_REPO_ID = 'VIPL-GENUN/OSI'
 DEFAULT_LOCAL_TEST_OPTIONS = (
     PROJECT_ROOT / 'options' / 'test' / 'local_test_GS_reverse_distill_uet_adv_sdV21.yml')
 EXTRACTOR_NAMES = ('fari', 'osi', 'ours')
@@ -65,17 +67,13 @@ def parse_args():
     parser.add_argument('--sd-model-id', default=DEFAULT_MODEL_ID)
     parser.add_argument('--fari-lora-rank', type=int, default=8)
     parser.add_argument(
-        '--osi-unet-checkpoint',
-        help='OSI SD v2.1 U-Net checkpoint from the run_osi_sd21 reference implementation.',
-        default="./osi_sd21_unet.pth"
-        )
+        '--osi-repo-id', default=DEFAULT_OSI_REPO_ID,
+        help='Hugging Face repository containing the official OSI SD 2.1 checkpoints.')
     parser.add_argument(
-        '--osi-encoder-checkpoint',
-        help='OSI SD v2.1 encoder and quant_conv checkpoint from the run_osi_sd21 reference implementation.',
-        default="./osi_sd21_encoder.pth"
-        )
+        '--osi-revision', default='main',
+        help='Hugging Face repository revision used for the OSI checkpoints.')
     parser.add_argument(
-        '--skip-extractors', nargs='*', choices=EXTRACTOR_NAMES, default=('fari', 'osi',),
+        '--skip-extractors', nargs='*', choices=EXTRACTOR_NAMES, default=(),
         help='Extractors to omit. For example: --skip-extractors fari ours evaluates OSI only.')
     parser.add_argument(
         '--prompts',
@@ -117,11 +115,14 @@ def configure_fari(pipe, args, device):
 
 
 def load_osi_model(pipe, args, device, dtype):
-    encoder_checkpoint = Path(args.osi_encoder_checkpoint)
-    unet_checkpoint = Path(args.osi_unet_checkpoint)
-    for checkpoint, name in ((encoder_checkpoint, 'encoder'), (unet_checkpoint, 'U-Net')):
-        if not checkpoint.is_file():
-            raise FileNotFoundError(f'OSI {name} checkpoint not found: {checkpoint}')
+    encoder_checkpoint = hf_hub_download(
+        repo_id=args.osi_repo_id,
+        filename='osi_sd21_encoder.pth',
+        revision=args.osi_revision)
+    unet_checkpoint = hf_hub_download(
+        repo_id=args.osi_repo_id,
+        filename='osi_sd21_unet.pth',
+        revision=args.osi_revision)
 
     model = OSIModel(
         unet=copy.deepcopy(pipe.unet),
@@ -172,11 +173,8 @@ def main():
         raise ValueError('At least one extractor must remain enabled.')
     if 'fari' in enabled_extractors and args.fari_lora_rank < 1:
         raise ValueError('--fari-lora-rank must be positive.')
-    if 'osi' in enabled_extractors and (
-            not args.osi_encoder_checkpoint or not args.osi_unet_checkpoint):
-        raise ValueError(
-            'OSI evaluation requires --osi-encoder-checkpoint and --osi-unet-checkpoint. '
-            'Use --skip-extractors osi to omit it.')
+    if 'osi' in enabled_extractors and not args.osi_repo_id:
+        raise ValueError('--osi-repo-id must be non-empty when OSI is enabled.')
 
     device = torch.device(args.device)
     dtype = torch.float32
@@ -275,10 +273,8 @@ def main():
             'skipped_extractors': tuple(args.skip_extractors),
             'fari_checkpoint': (str(Path(args.fari_checkpoint).resolve())
                                 if 'fari' in enabled_extractors else None),
-            'osi_encoder_checkpoint': (str(Path(args.osi_encoder_checkpoint).resolve())
-                                       if 'osi' in enabled_extractors else None),
-            'osi_unet_checkpoint': (str(Path(args.osi_unet_checkpoint).resolve())
-                                    if 'osi' in enabled_extractors else None),
+            'osi_repo_id': args.osi_repo_id if 'osi' in enabled_extractors else None,
+            'osi_revision': args.osi_revision if 'osi' in enabled_extractors else None,
             'sd_model_id': args.sd_model_id,
             'ours_option': str(Path(args.opt).resolve()) if opt else None,
             'ours_xstart_checkpoint': opt['path']['pretrain_network_xstart'] if opt else None,
