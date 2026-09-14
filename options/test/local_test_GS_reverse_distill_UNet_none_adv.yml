@@ -1,0 +1,41 @@
+# COCO Gaussian-Shading evaluation: two-branch reverse-distillation model.
+name: COCOGSReverseDistillUNetNoneADV
+model_type: ReverseDistillModel
+scale: 1
+cfg_sacle: 1.2
+alpha_cumprod_method: linear_alpha
+timestep_head_type: classifier
+num_gpu: 1
+manual_seed: 10
+online_one_step_distillation: false
+use_pred_xstart_prompt: true
+use_prompt_emb: false
+sd_model_id: sd-legacy/stable-diffusion-v1-5
+
+path:
+  pretrain_network_xstart: ./experiments/ReverseDistillUNet-noneADV/net_xstart_ema_latest.pth
+  pretrain_network_xt: ./experiments/ReverseDistillUNet-noneADV/net_xt_ema_latest.pth
+  pretrain_network_xstart_ema: ~
+  pretrain_network_xt_ema: ~
+  pretrain_xstart_prompt_tokens: ./experiments/ReverseDistillUNet-noneADV/xstart_prompt_tokens_latest.pth
+  pretrain_xstart_prompt_tokens_ema: ~
+  strict_load_g: true
+  resume_state: ~
+
+network_xstart:
+  type: NAFNet
+  img_channel: 4
+  width: 64
+  enc_blk_nums: [5, 5]
+  middle_blk_num: 12
+  dec_blk_nums: [5, 5]
+  prompt_channel_width: 768
+
+network_xt:
+  type: NAFNet
+  img_channel: 4
+  width: 64
+  enc_blk_nums: [5, 5]
+  middle_blk_num: 12
+  dec_blk_nums: [5, 5]
+  prompt_channel_width: 768

@@ -54,7 +54,7 @@ def parse_args():
         '--refresh-generation-cache',
         action='store_true',
         help='Regenerate and overwrite cached COCO samples.')
-    parser.add_argument('--num', type=int, default=10)
+    parser.add_argument('--num', type=int, default=1000)
     parser.add_argument(
         '--steps',
         type=int,
