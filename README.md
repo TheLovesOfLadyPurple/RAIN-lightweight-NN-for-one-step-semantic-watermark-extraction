@@ -32,6 +32,18 @@ The main training, clean evaluation, robustness evaluation, computational-cost,
 and latency scripts are included in this repository together with their YAML
 configurations under `options/`.
 
+## Computational cost
+
+Backbone cost of one latent-to-noise watermark extraction, measured with
+`calflops`; lower is better. Image encoding and Gaussian-Shading decoding are
+excluded for all methods.
+
+| Method | GFLOPs ↓ | GMACs ↓ | Parameters (M) ↓ |
+|:-------|---------:|--------:|-----------------:|
+| FARI   | 682.675  | 341.079 | 868.469          |
+| OSI    | 678.723  | 339.103 | 865.911          |
+| **RAIN (ours)** | **14.394** | **7.148** | **15.468** |
+
 ## Environment setup
 
 The evaluation scripts require an NVIDIA GPU. The following setup uses Python
