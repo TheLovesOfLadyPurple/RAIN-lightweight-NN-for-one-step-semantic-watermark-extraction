@@ -39,6 +39,17 @@ DEFAULT_LOCAL_TEST_OPTIONS = (
 EXTRACTOR_NAMES = ('fari', 'osi', 'ours')
 
 
+def configure_module_for_inference(module):
+    if isinstance(module, torch.nn.Module):
+        module.eval()
+        module.requires_grad_(False)
+
+
+def configure_reverse_model_for_inference(model):
+    for component in vars(model).values():
+        configure_module_for_inference(component)
+
+
 class OSIModel(torch.nn.Module):
     """The SD v2.1 OSI image encoder, quantizer, and one-step U-Net."""
 
@@ -109,7 +120,7 @@ def configure_fari(pipe, args, device):
         raise FileNotFoundError(f'FARI checkpoint not found: {checkpoint}')
     inject_fari_adapters(pipe.unet, args.fari_lora_rank)
     load_official_fari_state_dict(pipe.unet, torch.load(checkpoint, map_location='cpu'))
-    pipe.unet.eval()
+    configure_module_for_inference(pipe.unet)
     null_prompt_embedding, _ = pipe.encode_prompt('', device, 1, False)
     return null_prompt_embedding.detach()
 
@@ -136,7 +147,7 @@ def load_osi_model(pipe, args, device, dtype):
     model.encoder.load_state_dict(encoder_state, strict=False)
     model.quant_conv.load_state_dict(encoder_state, strict=False)
     model.unet.load_state_dict(unet_state, strict=False)
-    model.eval()
+    configure_module_for_inference(model)
     null_prompt_embedding, _ = pipe.encode_prompt('', device, 1, False)
     return model, null_prompt_embedding.detach()
 
@@ -160,6 +171,7 @@ def aggregate_extraction_results(samples, extractor_name):
     }
 
 
+@torch.no_grad()
 def main():
     args = parse_args()
     if not 12 <= args.steps <= 15:
@@ -193,6 +205,8 @@ def main():
     pipe.safety_checker = None
     pipe.to(device=device, dtype=dtype)
     pipe.set_progress_bar_config(disable=True)
+    for component in pipe.components.values():
+        configure_module_for_inference(component)
     osi_model = osi_null_prompt_embedding = None
     if 'osi' in enabled_extractors:
         osi_model, osi_null_prompt_embedding = load_osi_model(pipe, args, device, dtype)
@@ -207,6 +221,7 @@ def main():
                 'The Ours option and --sd-model-id must use the same SD 2.1 backbone. '
                 f'Got {opt["sd_model_id"]!r} and {args.sd_model_id!r}.')
         convert_reverse_model_to_float32(model)
+        configure_reverse_model_for_inference(model)
 
     results = []
     progress_bar = tqdm(
