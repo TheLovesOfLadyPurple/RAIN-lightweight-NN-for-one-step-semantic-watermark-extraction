@@ -3,9 +3,10 @@
 RAIN is a lightweight, one-step extractor for Gaussian-Shading
 watermarks in Stable Diffusion images. It replaces iterative diffusion
 inversion and diffusion-scale extraction networks with two compact,
-prompt-free NAFNet branches.
+prompt-free NAFNet branches.  And its' GFlops is 47x time smaller than 
+those latest algorithm like FARI and OSI proposed in the 2026 top tier conference
 
-Paper: [RAIN: Region-Aware Inversion Network for Semantic Watermark Extraction](https://arxiv.org/abs/2609.14856)
+Paper: [Read the latest version of RAIN](RAIN__Region_Aware_Inversion_Network_for_Semantic_Watermark_Extraction%20%282%29.pdf)
 
 ## Method
 
