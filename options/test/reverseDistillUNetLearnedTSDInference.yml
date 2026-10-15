@@ -1,0 +1,43 @@
+# ------------------------------------------------------------------------
+# Learned-t reverse distillation with SD-assisted DDIM-inverse features.
+# ------------------------------------------------------------------------
+name: ReverseDistillUNetLearnedTSDInference
+model_type: ReverseDistillLearnedTModel
+scale: 1
+cfg_sacle: 7.5
+num_gpu: 1
+manual_seed: 10
+
+use_pred_xstart_prompt: false
+use_sd_inference: true
+sd_inference_timesteps: [100, 150, 200]
+learned_timestep_init: 850.0
+online_source_timestep: 999
+online_target_timestep: 850
+sd_model_id: sd-legacy/stable-diffusion-v1-5
+
+path:
+  pretrain_network_xstart: ~
+  pretrain_network_xt: ~
+  pretrain_network_xstart_ema: ~
+  pretrain_network_xt_ema: ~
+  strict_load_g: false
+  resume_state: ~
+
+network_xstart:
+  type: ReversePromptNAFNet
+  img_channel: 4
+  width: 64
+  enc_blk_nums: [10, 10]
+  middle_blk_num: 24
+  dec_blk_nums: [10, 10]
+  prompt_channel_width: 768
+
+network_xt:
+  type: ReversePromptNAFNet
+  img_channel: 4
+  width: 64
+  enc_blk_nums: [10, 10]
+  middle_blk_num: 24
+  dec_blk_nums: [10, 10]
+  prompt_channel_width: 768

@@ -1,0 +1,24 @@
+anyio 
+diffusers 
+peft
+wandb
+lmdb
+transformers
+accelerate
+datasets
+evaluate 
+scipy
+opencv-python
+matplotlib
+ImageIO
+piq
+safetensors
+gradio
+huggingface-hub
+xformers
+# mmcv
+scikit-image
+timm
+einops
+torch_dct
+pycryptodome

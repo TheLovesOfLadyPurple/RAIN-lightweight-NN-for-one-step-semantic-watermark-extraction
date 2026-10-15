@@ -1,0 +1,23 @@
+# COCO Gaussian-Shading evaluation: single NAFNet directly predicts x_T.
+name: COCOSingleNAFNetDirectXT
+model_type: ReverseDistillSingleNAFNetModel
+prediction_type: direct_xT
+scale: 1
+num_gpu: 1
+manual_seed: 10
+use_prompt_emb: false
+sd_model_id: sd-legacy/stable-diffusion-v1-5
+
+path:
+  pretrain_network_g: ./experiments/SingleNAFNetDirectXT/models/net_g_ema_15000.pth
+  pretrain_network_g_ema: ~
+  strict_load_g: true
+  resume_state: ~
+
+network_g:
+  type: NAFNet
+  img_channel: 4
+  width: 64
+  enc_blk_nums: [10, 10]
+  middle_blk_num: 24
+  dec_blk_nums: [10, 10]
