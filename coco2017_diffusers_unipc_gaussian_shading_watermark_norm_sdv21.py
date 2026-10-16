@@ -1,4 +1,10 @@
-"""L2 norm of the watermark latent recovered by each SD 2.1 GS extractor."""
+"""L2 norm of the watermark latent recovered by each SD 2.1 GS extractor.
+
+This script checks whether the noise returned by FARI and RAIN has a smaller
+norm than DDIM inversion. FARI and RAIN predict the mean of the noise, a weighted
+sum of noises whose weights add to one. A weighted mean does not keep the norm of
+the original noise: that requires the squared weights to add to one.
+"""
 
 import argparse
 import csv
@@ -98,6 +104,14 @@ def noise_norm(latent):
         'l2': l2,
         'rms': l2 / values.numel() ** 0.5,
     }
+
+
+def expected_standard_gaussian_l2(numel):
+    """E[||Z||_2] for Z ~ N(0, I_numel)."""
+    half = torch.tensor(numel / 2, dtype=torch.float64)
+    return torch.exp(
+        torch.lgamma(half + 0.5) - torch.lgamma(half) + 0.5 * torch.log(torch.tensor(2.0, dtype=torch.float64))
+    ).item()
 
 
 def extracted_norm(predicted_noise, target_noise):
@@ -242,7 +256,7 @@ def main():
         prompt = caption_record['caption']
         seed = args.seed + index
         cache_file = cache_files[index]
-        (_, watermarked_noise, _, generated_image, _, _, _, _) = load_or_generate_sample(
+        (_, watermarked_noise, _, generated_image, control_noise, _, _, _) = load_or_generate_sample(
             cache_file, prompt, seed, args, pipe, device, dtype, require_cache=True)
         base_image = tensor_to_pil(generated_image[0])
         attacks = measure_attacks(base_image, watermarked_noise, seed, extractors_before_ddim)
@@ -253,6 +267,7 @@ def main():
             'generation_cache_path': str(cache_file.resolve()),
             'used_generation_cache': used_generation_cache[index],
             'watermark_noise': noise_norm(watermarked_noise),
+            'gaussian_noise': noise_norm(control_noise),
             'attacks': attacks,
         })
 
@@ -289,6 +304,9 @@ def main():
     }
     watermark_l2 = torch.tensor(
         [sample['watermark_noise']['l2'] for sample in samples], dtype=torch.float64)
+    gaussian_l2 = torch.tensor(
+        [sample['gaussian_noise']['l2'] for sample in samples], dtype=torch.float64)
+    gaussian_expected_l2 = expected_standard_gaussian_l2(4 * 64 * 64)
     report = {
         'configuration': {
             'enabled_extractors': enabled_extractors,
@@ -313,12 +331,17 @@ def main():
             'attack_order': ATTACK_NAMES,
             'watermark_noise_mean_l2': watermark_l2.mean().item(),
             'watermark_noise_std_l2': watermark_l2.std(correction=0).item(),
+            'gaussian_noise_mean_l2': gaussian_l2.mean().item(),
+            'gaussian_noise_std_l2': gaussian_l2.std(correction=0).item(),
+            'gaussian_noise_expected_l2': gaussian_expected_l2,
             'protocol_note': (
                 'The extracted watermark is the latent recovered by each extractor from the '
                 'attacked watermarked image. l2 is its Euclidean norm and rms is l2 divided by '
                 'sqrt(4*64*64). target_l2 is the norm of the original Gaussian Shading noise, '
-                'and l2_ratio is extracted l2 divided by that target. Attacks and seeds match '
-                'the SD 2.1 robustness evaluation. DDIM inversion reloads a fresh pipeline.'),
+                'and l2_ratio is extracted l2 divided by that target. gaussian_noise_mean_l2 is '
+                'the mean L2 of the cached standard normal control latents, shape (1, 4, 64, 64). '
+                'gaussian_noise_expected_l2 is the exact expectation of that L2. Attacks and seeds '
+                'match the SD 2.1 robustness evaluation. DDIM inversion reloads a fresh pipeline.'),
         },
         'summary': summary,
         'samples': samples,
@@ -326,7 +349,12 @@ def main():
     with open(output_dir / 'metrics.json', 'w', encoding='utf-8') as file:
         json.dump(report, file, indent=2)
     save_norm_csv(summary, output_dir / 'watermark_norm.csv')
-    print(json.dumps(summary, indent=2))
+    print(json.dumps({
+        'watermark_noise_mean_l2': report['configuration']['watermark_noise_mean_l2'],
+        'gaussian_noise_mean_l2': report['configuration']['gaussian_noise_mean_l2'],
+        'gaussian_noise_expected_l2': gaussian_expected_l2,
+        'summary': summary,
+    }, indent=2))
     print(f'Saved extracted-watermark norms to {output_dir}')
 
 
