@@ -1,12 +1,16 @@
-# RAIN: a lightweight network for the watermark extraction
+# RAIN: Region-Aware Inversion Network for Semantic Watermark Extraction
 
 RAIN is a lightweight, one-step extractor for Gaussian-Shading
 watermarks in Stable Diffusion images. It replaces iterative diffusion
 inversion and diffusion-scale extraction networks with two compact,
-prompt-free NAFNet branches.  And its' GFlops is 47x time smaller than 
-those latest algorithm like FARI and OSI proposed in the 2026 top tier conference
+prompt-free NAFNet branches, using 47× fewer GFLOPs than recent 2026
+one-step extractors such as FARI and OSI.
 
 Paper: [Read the latest version of RAIN](RAIN__Region_Aware_Inversion_Network_for_Semantic_Watermark_Extraction.pdf)
+
+> [!TIP]
+> **Want to see the mathematical details of Extended Rectified Flow?**
+> Read [RF_MATHEMATICS.md](RF_MATHEMATICS.md) (together with [TheReasonWhySomeDistillationModelCouldNotUseDDIMInverse.pdf](TheReasonWhySomeDistillationModelCouldNotUseDDIMInverse.pdf)) for a step-by-step walkthrough of the algorithm's mathematical elegance: why Rectified Flow predicts the conditional means of velocity, epsilon, or `z_0`, how following a mean velocity field still transports exact probability distributions, and why this makes lightweight one-step watermark extraction work.
 
 ## Method
 
@@ -21,8 +25,9 @@ branches then process that latent independently:
    noise regions to detect and trace the watermark.
 
 Because the branches are independent when the noise branch is a NAFNet, they
-run concurrently on separate CUDA streams during inference. The extractor does
-not require the generation prompt or repeated U-Net evaluations.
+run concurrently on separate CUDA streams (or across two GPUs) during
+inference. The extractor does not require the generation prompt or repeated
+U-Net evaluations.
 
 Clean evaluation, robustness evaluation, computational-cost, and latency
 scripts are included in this repository together with their YAML
@@ -32,13 +37,14 @@ configurations under `options/`.
 
 Backbone cost of one latent-to-noise watermark extraction, measured with
 `calflops`; lower is better. Image encoding and Gaussian-Shading decoding are
-excluded for all methods.
+excluded for all methods. Latency is measured on 224 images across 2× A800 GPUs
+under a matched VRAM budget.
 
-| Method | GFLOPs ↓ | GMACs ↓ | Parameters (M) ↓ |
-|:-------|---------:|--------:|-----------------:|
-| FARI   | 682.675  | 341.079 | 868.469          |
-| OSI    | 678.723  | 339.103 | 865.911          |
-| **RAIN (ours)** | **14.394** | **7.148** | **15.468** |
+| Method | GFLOPs ↓ | GMACs ↓ | Parameters (M) ↓ | Latency (ms/image) ↓ |
+|:-------|---------:|--------:|-----------------:|---------------------:|
+| FARI   | 682.675  | 341.079 | 868.469          | 37.344               |
+| OSI    | 678.723  | 339.103 | 865.911          | 31.320               |
+| **RAIN (ours)** | **14.394** | **7.148** | **15.468** | **1.392**     |
 
 ## Environment setup
 
